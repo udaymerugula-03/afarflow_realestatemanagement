@@ -7,7 +7,7 @@ import { demoImage } from "../lib/api";
 export function Brand() { return <Link href="/" className="brand"><span className="brand-mark">a<span>f</span></span>Aqar<span>Flow</span><small>REAL ESTATE, CONNECTED</small></Link>; }
 export function PublicHeader() {
   const { user } = useAuth();
-  return <header className="public-header"><div className="container header-inner"><Brand /><nav aria-label="Main navigation"><Link href="/properties">Explore properties</Link><Link href="/contact">Contact</Link><Link className="button small" href={user ? "/workspace" : "/login"}>{user ? "Workspace ↗" : "Agent sign in ↗"}</Link></nav></div></header>;
+  return <header className="public-header"><div className="container header-inner"><Brand /><nav aria-label="Main navigation"><Link href="/properties">Explore properties</Link><Link href="/contact">Contact</Link><Link className="button small" href={user ? "/workspace" : "/login"}>{user ? "Workspace ↗" : "Log in ↗"}</Link></nav></div></header>;
 }
 export function Footer() { return <footer><div className="container footer-inner"><Brand /><p>Better spaces. Stronger connections.<br /><span>Your next chapter starts here.</span></p><Link href="/properties">Find a property ↗</Link><Link href="/contact">Get in touch ↗</Link></div><div className="container copyright">© {new Date().getFullYear()} AqarFlow. A considered approach to real estate.</div></footer>; }
 export function Alert({ error }: { error: string }) { return error ? <div role="alert" className="alert">{error}</div> : null; }

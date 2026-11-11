@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 test("cloud listings and backgrounds use distinct bundled real photographs", async ({ page }) => {
   await page.route("https://images.unsplash.com/**", (route) => route.abort());
   await page.goto("/properties");
+  await expect(page.getByRole("link", { name: "Log in" })).toHaveAttribute("href", "/login");
   for (const [reference, filename] of [["AF-001", "villa.jpg"], ["AF-002", "apartment.jpg"], ["AF-003", "plot.jpg"]]) {
     const card = page.locator(".property-card").filter({ hasText: reference });
     await expect(card).toBeVisible();
@@ -20,7 +21,9 @@ test("cloud listings and backgrounds use distinct bundled real photographs", asy
   await page.locator(".property-card").filter({ hasText: "AF-001" }).click();
   await expect(page.locator(".detail-image > img")).toHaveAttribute("src", /\/demo-media\/villa\.jpg$/);
   await expect(page.getByText("Sample stock photograph for demonstration, not the actual listed property or evidence of its location.")).toBeVisible();
-  await page.goto("/login");
+  await page.getByRole("link", { name: "Log in" }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByRole("heading", { name: "Admin / Agent sign in", exact: true })).toBeVisible();
   await expect(page.locator(".login-art")).toBeVisible();
   expect(await page.locator(".login-art").evaluate((element) => getComputedStyle(element).backgroundImage)).toContain("/demo-media/villa.jpg");
   await page.goto("/");
@@ -44,5 +47,9 @@ test("cloud listings and backgrounds use distinct bundled real photographs", asy
   expect(await page.locator(".hero").evaluate((element) => getComputedStyle(element).backgroundImage)).toContain("/demo-media/neighborhood.jpg");
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator(".hero-art .scene")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Log in" })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.getByRole("link", { name: "Log in" }).click();
+  await expect(page.getByRole("heading", { name: "Admin / Agent sign in", exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
