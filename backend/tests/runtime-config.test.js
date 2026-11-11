@@ -9,14 +9,11 @@ const deployed = {
   BLOB_STORE_ID: "store_fixture",
 };
 
-test("local development retains embedded PostgreSQL and a temporary signing key", () => {
-  const config = loadRuntimeConfig({});
-  assert.equal(config.databaseUrl, undefined);
-  assert.equal(config.temporarySecret, true);
-  assert.ok(config.secret.length >= 32);
-  assert.equal(config.publicApiUrl, "http://localhost:8000");
-  assert.equal(config.maxUploadMb, 5);
-  assert.ok(config.origins.includes("http://localhost:3000"));
+test("missing cloud configuration never starts an embedded database or generates a temporary key", () => {
+  assert.throws(() => loadRuntimeConfig({}), /DATABASE_URL/);
+  assert.throws(() => loadRuntimeConfig({ DATABASE_URL: deployed.DATABASE_URL }), /SECRET_KEY/);
+  assert.throws(() => loadRuntimeConfig({ ...deployed, VERCEL: "", PUBLIC_API_URL: "" }), /PUBLIC_API_URL/);
+  assert.throws(() => loadRuntimeConfig({ ...deployed, VERCEL: "", SECRET_KEY: "" }), /SECRET_KEY/);
 });
 test("Vercel requires hosted PostgreSQL, a stable secret and persistent photo storage", () => {
   for (const field of ["DATABASE_URL", "SECRET_KEY", "BLOB_STORE_ID"]) {
@@ -24,10 +21,11 @@ test("Vercel requires hosted PostgreSQL, a stable secret and persistent photo st
   }
   const config = loadRuntimeConfig(deployed);
   assert.equal(config.vercel, true);
-  assert.equal(config.temporarySecret, false);
   assert.equal(config.publicApiUrl, "https://fixture-aqarflow.vercel.app");
   assert.equal(config.maxUploadMb, 4);
   assert.ok(config.origins.includes(config.publicApiUrl));
+  assert.deepEqual(config.origins, [config.publicApiUrl]);
+  assert.equal(config.uploadDir, undefined);
 });
 test("preview assets use the preview deployment rather than the production host", () => {
   const config = loadRuntimeConfig({ ...deployed, VERCEL_ENV: "preview", VERCEL_URL: "fixture-preview.vercel.app" });
@@ -38,7 +36,9 @@ test("invalid deployment configuration is rejected without echoing connection se
     { DATABASE_URL: "https://not-postgres.example" }, { SECRET_KEY: "short" },
     { PUBLIC_API_URL: "http://localhost:8000" }, { PUBLIC_API_URL: "https://example.test/api/v1" },
     { PUBLIC_API_URL: "https://fixture:private-value@example.test" },
-    { FRONTEND_ORIGINS: "*" }, { FRONTEND_ORIGINS: "https://example.test/path" }, { PORT: "0" },
+    { FRONTEND_ORIGINS: "*" }, { FRONTEND_ORIGINS: "https://example.test/path" },
+    { FRONTEND_ORIGINS: "http://localhost:3000" }, { DATABASE_URL: "postgresql://localhost/aqarflow" },
+    { DATABASE_URL: "postgresql://127.0.0.1/aqarflow" }, { DATABASE_URL: "postgresql://[::1]/aqarflow" },
   ]) {
     assert.throws(() => loadRuntimeConfig({ ...deployed, ...change }), (error) =>
       error instanceof Error && !error.message.includes("private-value"));

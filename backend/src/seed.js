@@ -1,29 +1,30 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { writeFile } from "node:fs/promises";
 import { connectDatabase, insert, migrate, one } from "./database.js";
+import { newAccountCredentials } from "./account-passwords.js";
 
 const db = await connectDatabase(process.env.DATABASE_URL);
 try {
   await migrate(db);
-  const email = process.env.DEMO_ADMIN_EMAIL || "admin@vireleo.local";
+  const credentials = newAccountCredentials(process.env.ADMIN_EMAIL, process.env.AGENT_EMAIL);
+  const email = credentials.admin;
+  const agentEmail = credentials.agent;
   if (await one(db, "SELECT id FROM users WHERE email=$1", [email])) {
-    throw new Error("Demo administrator already exists. Existing data was preserved. See .demo-credentials.json for the generated local login.");
+    throw new Error("Administrator already exists. Existing cloud data and credentials were preserved. Do not reseed a populated database.");
   }
-  const password = process.env.DEMO_PASSWORD || randomBytes(18).toString("base64url");
-  const credentialsFile = process.env.DEMO_CREDENTIALS_FILE || ".demo-credentials.json";
-  if (password.length < 12 || Buffer.byteLength(password) > 72) throw new Error("DEMO_PASSWORD must contain 12+ characters and at most 72 UTF-8 bytes");
-  const password_hash = await bcrypt.hash(password, 12);
+  const credentialsFile = process.env.CREDENTIALS_FILE || ".demo-credentials.cloud.json";
+  const [adminHash, agentHash] = await Promise.all([credentials.admin_password, credentials.agent_password].map((password) => bcrypt.hash(password, 12)));
   await db.transaction(async (tx) => {
     const agency = await insert(tx, "agencies", { id: randomUUID(), name: "VIRELEO" });
     const admin = await insert(tx, "users", {
       id: randomUUID(), agency_id: agency.id, full_name: "VIRELEO Administrator",
-      email, password_hash, role: "admin",
+      email, password_hash: adminHash, role: "admin",
     });
     const agent = await insert(tx, "users", {
       id: randomUUID(), agency_id: agency.id, full_name: "VIRELEO Agent",
-      email: "agent@vireleo.local", password_hash, role: "agent",
+      email: agentEmail, password_hash: agentHash, role: "agent",
     });
     const samples = [
       { reference_code: "AF-001", title: "Contemporary family home in DHA", city: "Lahore", locality: "DHA Phase 6", type: "house", purpose: "sale", price: "42500000", area: 10, area_unit: "marla", bedrooms: 4, bathrooms: 4, images: ["/demo-media/villa.jpg"] },
@@ -45,10 +46,7 @@ try {
       message: "I would like to arrange a visit.", assigned_agent_id: agent.id,
     });
     await insert(tx, "activities", { id: randomUUID(), agency_id: agency.id, lead_id: lead.id, actor_id: admin.id, body: "Demo inquiry added." });
-    await writeFile(credentialsFile, JSON.stringify({
-      note: "LOCAL DEMO ONLY. Ignored by Git. Never reuse this password for real accounts.",
-      admin: email, agent: "agent@vireleo.local", password,
-    }, null, 2), { mode: 0o600, flag: "wx" });
+    await writeFile(credentialsFile, JSON.stringify(credentials, null, 2), { mode: 0o600, flag: "wx" });
   });
   console.info(`Demo data created. Admin/agent credentials are in ${credentialsFile}; keep this file private and out of Git.`);
 } finally {

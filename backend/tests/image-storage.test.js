@@ -6,8 +6,8 @@ import { createImageStore } from "../src/image-storage.js";
 const env = { VERCEL: "1", BLOB_STORE_ID: "store_fixture" };
 const secureUrl = "https://fixture.public.blob.vercel-storage.com/aqarflow/fixture.jpg";
 
-test("local photo storage remains local unless persistent storage is configured", () => {
-  assert.equal(createImageStore({}), null);
+test("persistent photo storage is required even outside the Vercel runtime", () => {
+  assert.throws(() => createImageStore({}), /Blob storage/);
   assert.throws(() => createImageStore({ VERCEL: "1" }), /Blob storage/);
   assert.throws(() => createImageStore({ NODE_ENV: "production" }), /Blob storage/);
 });
@@ -26,7 +26,7 @@ test("public Blob uploads use processed bytes and record-scoped unique paths", a
   });
   assert.equal(await store(content, { agencyId: "agency-1", propertyId: "property-1" }), secureUrl);
 });
-test("local external-storage use may pass a static token without changing Vercel OIDC behavior", async () => {
+test("external-storage tooling may pass a static token without changing Vercel OIDC behavior", async () => {
   const store = createImageStore({ BLOB_READ_WRITE_TOKEN: "fixture-only-not-a-real-token" }, async (_path, _body, options) => {
     assert.equal(options.token, "fixture-only-not-a-real-token");
     return { url: secureUrl };

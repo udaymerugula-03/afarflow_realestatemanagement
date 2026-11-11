@@ -3,7 +3,8 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 const email = process.env.AQARFLOW_TEST_EMAIL;
 const password = process.env.AQARFLOW_TEST_PASSWORD;
 const agentEmail = process.env.AQARFLOW_TEST_AGENT_EMAIL;
-const apiURL = (process.env.FRONTEND_TEST_API_URL || process.env.VITE_API_URL || "http://localhost:8000/api/v1").replace(/\/$/, "");
+const agentPassword = process.env.AQARFLOW_TEST_AGENT_PASSWORD;
+const apiURL = (process.env.FRONTEND_TEST_API_URL || `${process.env.FRONTEND_TEST_URL || "https://aqarflow-real-estate.vercel.app"}/api/v1`).replace(/\/$/, "");
 
 function field(root: Page | Locator, name: string) {
   return root.locator(`input[name="${name}"],select[name="${name}"],textarea[name="${name}"]`);
@@ -12,7 +13,8 @@ function field(root: Page | Locator, name: string) {
 async function login(page: Page, account: string) {
   await page.goto("/login");
   await page.getByLabel("Work email", { exact: true }).fill(account);
-  await page.getByLabel("Password", { exact: true }).fill(password!);
+  if (account === agentEmail && !agentPassword) throw new Error("AQARFLOW_TEST_AGENT_PASSWORD is required for the separate Agent account.");
+  await page.getByLabel("Password", { exact: true }).fill(account === agentEmail ? agentPassword! : password!);
   await page.getByRole("button", { name: "Sign in to workspace" }).click();
   await expect(page).toHaveURL(/\/workspace$/);
   await expect(page.locator(".stats-grid .stat-card")).toHaveCount(6);
@@ -42,7 +44,7 @@ async function selectLead(page: Page, leadId: string, propertyId: string, agentI
 }
 
 test("marketplace → property → CRM → visit conflict → closed deal, with role-aware access", async ({ page }) => {
-  test.skip(!email || !password, "Set AQARFLOW_TEST_EMAIL and AQARFLOW_TEST_PASSWORD for a seeded local test agency.");
+  test.skip(!email || !password, "Set AQARFLOW_TEST_EMAIL and AQARFLOW_TEST_PASSWORD for the cloud test agency.");
   let propertyId: string | undefined;
   let agentId = "";
   let leadId = "";
@@ -69,7 +71,7 @@ test("marketplace → property → CRM → visit conflict → closed deal, with 
       await form.getByLabel("Your name", { exact: true }).fill("Playwright Visitor");
       await form.getByLabel("Email", { exact: true }).fill("playwright-visitor@example.com");
       await form.getByLabel("Phone", { exact: true }).fill("+923001234567");
-      await form.getByRole("textbox", { name: "Your message", exact: true }).fill("Local frontend end-to-end inquiry verification.");
+      await form.getByRole("textbox", { name: "Your message", exact: true }).fill("Cloud frontend end-to-end inquiry verification.");
       await form.getByRole("checkbox").check();
       await form.getByRole("button", { name: "Send inquiry" }).click();
       await expect(form.locator(".success")).toContainText(/inquiry/i);
@@ -320,7 +322,7 @@ test("marketplace → property → CRM → visit conflict → closed deal, with 
       if (response.ok()) {
         const deals = await response.json() as { id: string; property_id: string; stage: string }[];
         for (const deal of deals.filter((item) => item.property_id === propertyId && !["closed_won", "closed_lost"].includes(item.stage))) {
-          await page.request.patch(`${apiURL}/deals/${deal.id}`, { headers, data: { stage: "closed_lost", notes: "Local E2E cleanup." } });
+          await page.request.patch(`${apiURL}/deals/${deal.id}`, { headers, data: { stage: "closed_lost", notes: "Cloud E2E cleanup." } });
         }
       }
       const archived = await page.request.delete(`${apiURL}/properties/${propertyId}`, { headers });

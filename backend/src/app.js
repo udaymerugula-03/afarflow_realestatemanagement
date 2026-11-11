@@ -6,9 +6,6 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import sharp from "sharp";
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import swaggerUi from "swagger-ui-express";
 import { insert, one, update } from "./database.js";
@@ -26,29 +23,28 @@ const uuid = () => randomUUID();
 
 export function createApp(db, config) {
   if (!config.secret || config.secret.length < 32) throw new Error("SECRET_KEY must contain at least 32 random characters");
+  if (!config.publicApiUrl || new URL(config.publicApiUrl).protocol !== "https:") throw new Error("A public HTTPS API origin is required");
+  if (typeof config.storeImage !== "function") throw new Error("Persistent property photo storage is required");
   const app = express();
   app.set("trust proxy", config.trustProxy ?? false);
-  const uploads = path.resolve(config.uploadDir || "uploads");
-  const maxUploadMb = config.maxUploadMb ?? 5;
+  const maxUploadMb = config.maxUploadMb ?? 4;
   const dummyHash = bcrypt.hashSync("not-a-real-user-password", 12);
   app.disable("x-powered-by");
   app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
   app.use(cors({
-    origin: (origin, done) => done(null, !origin || (config.origins || ["http://localhost:3000"]).includes(origin)),
+    origin: (origin, done) => done(null, !origin || (config.origins || [config.publicApiUrl]).includes(origin)),
     methods: ["GET", "POST", "PATCH", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
   }));
   app.use(express.json({ limit: "64kb" }));
   app.use((req, res, next) => {
-    if (!req.path.startsWith("/api/v1/public/") && !req.path.startsWith("/media/")) res.set("Cache-Control", "no-store");
+    if (!req.path.startsWith("/api/v1/public/")) res.set("Cache-Control", "no-store");
     next();
   });
-  app.use("/media", express.static(uploads, { dotfiles: "deny", index: false, fallthrough: true }));
-  app.use("/demo-media", express.static(fileURLToPath(new URL("../public/demo/", import.meta.url)), { index: false, dotfiles: "deny" }));
   const propertyRecord = (property) => ({
     ...property,
     images: property.images.map((image) => image.startsWith("/demo-media/")
-      ? new URL(image, config.publicApiUrl || "http://localhost:8000").href : image),
+      ? new URL(image, config.publicApiUrl).href : image),
   });
   const publicRecord = (property) => publicProperty(propertyRecord(property));
   const api = express.Router();
@@ -259,15 +255,7 @@ export function createApp(db, config) {
     const item = await db.transaction(async (tx) => {
       const property = await owned(tx, "properties", req.params.id, req.user, true);
       if (property.images.length >= 10) fail(422, "A maximum of 10 images is allowed");
-      let url;
-      if (config.storeImage) {
-        url = await config.storeImage(content, { agencyId: req.user.agency_id, propertyId: property.id });
-      } else {
-        await mkdir(uploads, { recursive: true });
-        const filename = `${uuid()}.jpg`;
-        await writeFile(path.join(uploads, filename), content, { flag: "wx" });
-        url = `${(config.publicApiUrl || "http://localhost:8000").replace(/\/$/, "")}/media/${filename}`;
-      }
+      const url = await config.storeImage(content, { agencyId: req.user.agency_id, propertyId: property.id });
       const result = await update(tx, "properties", property.id, { images: [...property.images, url] });
       await audit(tx, req.user, "property.image_uploaded", result.id);
       return result;

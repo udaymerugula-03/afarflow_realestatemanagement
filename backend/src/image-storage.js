@@ -9,8 +9,7 @@ function unavailable() {
 
 export function createImageStore(env = process.env, upload = put) {
   if (!env.BLOB_STORE_ID && !env.BLOB_READ_WRITE_TOKEN) {
-    if (env.VERCEL === "1" || env.NODE_ENV === "production") throw new Error("Vercel Blob storage is required for persistent property photos in deployment.");
-    return null;
+    throw new Error("Vercel Blob storage is required for persistent property photos in deployment.");
   }
   return async (buffer, { agencyId, propertyId }) => {
     const options = {

@@ -7,15 +7,13 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "dev": "node --watch src/server.js",
-    "start": "node src/server.js",
     "migrate": "node src/migrate.js",
     "seed": "node src/seed.js",
+    "rotate-passwords": "node src/rotate-passwords.js",
     "test": "node --test --test-concurrency=1 tests/*.test.js",
-    "check": "node --check src/app.js && node --check src/database.js && node --check src/schemas.js && node --check src/server.js"
+    "check": "node --check src/app.js && node --check src/database.js && node --check src/schemas.js && node --check src/server.js && node --check src/seed.js && node --check src/account-passwords.js && node --check src/rotate-passwords.js"
   },
   "dependencies": {
-    "@electric-sql/pglite": "^0.5.16",
     "@vercel/blob": "^2.9.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
@@ -31,6 +29,7 @@
     "zod-to-json-schema": "^3.25.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.16",
     "supertest": "^7.1.4"
   }
 }

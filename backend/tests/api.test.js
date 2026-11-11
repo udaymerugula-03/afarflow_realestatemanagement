@@ -8,16 +8,24 @@ import { access, mkdtemp, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { createApp } from "../src/app.js";
 import { connectDatabase, insert, migrate } from "../src/database.js";
+import { connectTestDatabase } from "./helpers/database.js";
+import { rotateAccountPasswords } from "../src/account-passwords.js";
 
 let db, api, directory;
 const headers = {};
 const people = {};
 const password = "CorrectPassword123!";
 let password_hash;
+const remoteUrl = "https://fixture.public.blob.vercel-storage.com/aqarflow/fixture.jpg";
+const appConfig = {
+  secret: "test-only-signing-key-not-for-production-123456",
+  publicApiUrl: "https://fixture-aqarflow.vercel.app",
+  storeImage: async () => remoteUrl,
+};
 
 before(async () => {
   directory = await mkdtemp(path.resolve(".aqarflow-test-"));
-  db = await connectDatabase(undefined, "memory://");
+  db = await connectTestDatabase();
   await migrate(db);
   password_hash = await bcrypt.hash(password, 4);
 });
@@ -29,7 +37,7 @@ beforeEach(async () => {
   await db.exec("TRUNCATE agencies,users,sessions,properties,leads,activities,visits,deals,audit_logs,rate_buckets CASCADE");
   const a = await insert(db, "agencies", { id: randomUUID(), name: "Agency A" });
   const b = await insert(db, "agencies", { id: randomUUID(), name: "Agency B" });
-  api = request(createApp(db, { secret: "test-only-signing-key-not-for-production-123456", uploadDir: directory }));
+  api = request(createApp(db, appConfig));
   for (const [name, agency, role] of [["admin", a, "admin"], ["agent", a, "agent"], ["other", b, "admin"], ["second", a, "agent"]]) {
     const user = await insert(db, "users", { id: randomUUID(), agency_id: agency.id, full_name: name, email: `${name}@example.com`, password_hash, role });
     people[name] = user.id;
@@ -62,6 +70,51 @@ test("login, role checks and revocable logout", async () => {
   await api.post("/api/v1/properties").set(headers.agent).send(propertyData()).expect(403);
   await api.post("/api/v1/auth/logout").set(headers.agent).expect(200);
   await api.get("/api/v1/auth/me").set(headers.agent).expect(401);
+});
+
+test("runtime refuses embedded storage and missing persistent photo configuration", async () => {
+  await assert.rejects(connectDatabase(), /DATABASE_URL/);
+  await assert.rejects(connectDatabase("postgresql://localhost/aqarflow"), /hosted PostgreSQL/);
+  assert.throws(() => createApp(db, { ...appConfig, storeImage: undefined }), /Persistent property photo storage/);
+  assert.throws(() => createApp(db, { ...appConfig, publicApiUrl: undefined }), /HTTPS API origin/);
+});
+
+test("password rotation separates roles, revokes both sessions and preserves other users", async () => {
+  let prepared;
+  const credentials = await rotateAccountPasswords(db, { admin: "admin@example.com", agent: "agent@example.com" },
+    async (value) => { prepared = value; });
+  assert.equal(prepared, credentials);
+  assert.notEqual(credentials.admin_password, credentials.agent_password);
+  assert.ok(credentials.admin_password.length >= 32 && credentials.agent_password.length >= 32);
+  await api.get("/api/v1/auth/me").set(headers.admin).expect(401);
+  await api.get("/api/v1/auth/me").set(headers.agent).expect(401);
+  await api.get("/api/v1/auth/me").set(headers.second).expect(200);
+  for (const [email, replacement, wrong] of [
+    [credentials.admin, credentials.admin_password, credentials.agent_password],
+    [credentials.agent, credentials.agent_password, credentials.admin_password],
+  ]) {
+    await api.post("/api/v1/auth/login").send({ email, password }).expect(401);
+    await api.post("/api/v1/auth/login").send({ email, password: wrong }).expect(401);
+    const response = await api.post("/api/v1/auth/login").send({ email, password: replacement }).expect(200);
+    assert.equal(response.body.user.role, email === credentials.admin ? "admin" : "agent");
+  }
+  const audit = await db.query("SELECT details FROM audit_logs WHERE action='user.password_rotated'");
+  assert.equal(audit.rows.length, 2);
+  assert.ok(!JSON.stringify(audit.rows).includes(credentials.admin_password));
+});
+
+test("password rotation refuses cross-agency accounts and rolls back if private storage fails", async () => {
+  let prepared = false;
+  await assert.rejects(rotateAccountPasswords(db, { admin: "other@example.com", agent: "agent@example.com" },
+    async () => { prepared = true; }), /same agency/);
+  assert.equal(prepared, false);
+  const failure = new Error("fixture private file unavailable");
+  await assert.rejects(rotateAccountPasswords(db, { admin: "admin@example.com", agent: "agent@example.com" },
+    async () => { throw failure; }), (error) => error === failure);
+  await api.get("/api/v1/auth/me").set(headers.admin).expect(200);
+  await api.get("/api/v1/auth/me").set(headers.agent).expect(200);
+  const users = await db.query("SELECT password_hash FROM users WHERE email IN ('admin@example.com','agent@example.com')");
+  assert.ok(users.rows.every((user) => user.password_hash === password_hash));
 });
 
 test("public listings, filters, pagination, unpublish and tenant isolation", async () => {
@@ -119,18 +172,17 @@ test("validation, duplicate reference codes and valid/invalid image uploads", as
   await api.post(`/api/v1/properties/${item.id}/images`).set(headers.admin).attach("file", Buffer.from("not an image"), "bad.jpg").expect(422);
   const image = await sharp({ create: { width: 10, height: 10, channels: 3, background: "#123456" } }).png().toBuffer();
   const uploaded = await api.post(`/api/v1/properties/${item.id}/images`).set(headers.admin).attach("file", image, "photo.png").expect(200);
-  const filename = uploaded.body.images[0].split("/").at(-1);
-  await api.get(`/media/${filename}`).expect(200).expect("Content-Type", /image\/jpeg/);
+  assert.deepEqual(uploaded.body.images, [remoteUrl]);
+  await api.get("/media/fixture.jpg").expect(404);
   await api.post("/api/v1/public/inquiries").send({ property_id: item.id, name: "Buyer", email: "bad", phone: "invalid", message: "Test", consent: false }).expect(422);
 });
 
 test("cloud photo uploads persist remote URLs without using the local upload directory", async () => {
   const item = await property();
   const uploadDir = path.join(directory, "cloud-must-not-write-here");
-  const remoteUrl = "https://res.cloudinary.com/fixture-cloud/image/upload/v1/fixture.jpg";
   let uploaded = 0;
   const cloudApi = request(createApp(db, {
-    secret: "test-only-signing-key-not-for-production-123456", uploadDir, maxUploadMb: 4,
+    ...appConfig, uploadDir, maxUploadMb: 4,
     storeImage: async (content, context) => {
       assert.equal((await sharp(content).metadata()).format, "jpeg");
       assert.equal(context.propertyId, item.id);
@@ -152,7 +204,7 @@ test("cloud photo uploads persist remote URLs without using the local upload dir
 test("a failed cloud upload never appends an image or reports success", async () => {
   const item = await property();
   const cloudApi = request(createApp(db, {
-    secret: "test-only-signing-key-not-for-production-123456", uploadDir: directory,
+    ...appConfig,
     storeImage: async () => {
       const error = new Error("Property photo storage is unavailable. Please try again later.");
       error.status = 502;
@@ -355,27 +407,27 @@ test("rent-purpose deals close as rented and retain their property status histor
   assert.equal((await api.get(`/api/v1/leads/${leadId}`).set(headers.agent)).body.stage, "converted");
 });
 
-test("local PostgreSQL data survives closing and reopening the database", async () => {
+test("isolated test PostgreSQL data survives closing and reopening the database", async () => {
   const directoryPath = path.join(directory, "persistent-postgres");
-  const first = await connectDatabase(undefined, directoryPath);
+  const first = await connectTestDatabase(directoryPath);
   const agencyId = randomUUID();
   try {
     await migrate(first);
     await insert(first, "agencies", { id: agencyId, name: "Persistent agency" });
   } finally { await first.close(); }
-  const reopened = await connectDatabase(undefined, directoryPath);
+  const reopened = await connectTestDatabase(directoryPath);
   try {
     const saved = await reopened.query("SELECT name FROM agencies WHERE id=$1", [agencyId]);
     assert.equal(saved.rows[0].name, "Persistent agency");
   } finally { await reopened.close(); }
 });
 
-test("PKR defaults, compatible area units and local demo images work across property endpoints", async () => {
+test("PKR defaults, compatible area units and cloud sample image URLs work across property endpoints", async () => {
   const item = await property({ area_unit: "sq yd" });
   assert.equal(item.currency, "PKR");
   await api.post("/api/v1/properties").set(headers.admin).send(propertyData({ reference_code: "OLD-CURRENCY", currency: "INR" })).expect(422);
   await db.query("UPDATE properties SET images=$1::jsonb WHERE id=$2", [JSON.stringify(["/demo-media/villa.jpg"]), item.id]);
-  const expected = "http://localhost:8000/demo-media/villa.jpg";
+  const expected = `${appConfig.publicApiUrl}/demo-media/villa.jpg`;
   for (const [url, authHeaders] of [
     [`/api/v1/public/properties/${item.id}`, {}],
     [`/api/v1/properties/${item.id}`, headers.admin],
@@ -387,7 +439,7 @@ test("PKR defaults, compatible area units and local demo images work across prop
   assert.equal((await api.get("/api/v1/public/properties")).body.items[0].images[0], expected);
   assert.equal((await api.get("/api/v1/properties").set(headers.admin)).body.items[0].images[0], expected);
   for (const name of ["villa", "apartment", "plot", "neighborhood"]) {
-    await api.get(`/demo-media/${name}.jpg`).expect(200).expect("Content-Type", /image\/jpeg/);
+    await api.get(`/demo-media/${name}.jpg`).expect(404);
     const metadata = await sharp(await readFile(new URL(`../public/demo/${name}.jpg`, import.meta.url))).metadata();
     assert.equal(metadata.format, "jpeg");
     assert.ok(metadata.width >= 1200);
@@ -398,7 +450,7 @@ test("PKR defaults, compatible area units and local demo images work across prop
 });
 
 test("historical India/photo migrations finish in Pakistan without losing IDs, uploads or notes", async () => {
-  const legacy = await connectDatabase(undefined, "memory://");
+  const legacy = await connectTestDatabase();
   try {
     await legacy.exec(await readFile(new URL("../migrations/001_initial.sql", import.meta.url), "utf8"));
     await legacy.exec("CREATE TABLE schema_migrations(version TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP); INSERT INTO schema_migrations(version) VALUES('001')");
@@ -435,7 +487,7 @@ test("historical India/photo migrations finish in Pakistan without losing IDs, u
 });
 
 test("004 restores only original Indian-city demos and preserves all images, accounts and workflows", async () => {
-  const legacy = await connectDatabase(undefined, "memory://");
+  const legacy = await connectTestDatabase();
   try {
     for (const filename of ["001_initial.sql", "002_india_demo.sql", "003_real_demo_photos.sql"]) {
       await legacy.exec(await readFile(new URL(`../migrations/${filename}`, import.meta.url), "utf8"));

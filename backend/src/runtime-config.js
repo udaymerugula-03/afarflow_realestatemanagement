@@ -1,37 +1,29 @@
-import { randomBytes } from "node:crypto";
+import { validateDatabaseUrl } from "./database.js";
 
 export function loadRuntimeConfig(env = process.env) {
   const vercel = env.VERCEL === "1";
-  const production = vercel || env.NODE_ENV === "production";
-  if (production && !env.DATABASE_URL) throw new Error("DATABASE_URL is required for deployment; local PGlite cannot be used in the cloud.");
-  if (production && !env.SECRET_KEY) throw new Error("SECRET_KEY is required for deployment.");
-  if (production && !env.BLOB_STORE_ID && !env.BLOB_READ_WRITE_TOKEN) throw new Error("Vercel Blob storage is required for persistent property photos in deployment.");
-  if (env.DATABASE_URL && (!URL.canParse(env.DATABASE_URL) || !["postgres:", "postgresql:"].includes(new URL(env.DATABASE_URL).protocol))) {
-    throw new Error("DATABASE_URL must be a PostgreSQL connection URL.");
-  }
-  const secret = env.SECRET_KEY || randomBytes(48).toString("base64url");
+  validateDatabaseUrl(env.DATABASE_URL);
+  if (!env.SECRET_KEY) throw new Error("SECRET_KEY is required for deployment.");
+  if (!env.BLOB_STORE_ID && !env.BLOB_READ_WRITE_TOKEN) throw new Error("Vercel Blob storage is required for persistent property photos in deployment.");
+  const secret = env.SECRET_KEY;
   if (secret.trim().length < 32) throw new Error("SECRET_KEY must contain at least 32 random characters.");
-  const port = Number(env.PORT || 8000);
-  if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("PORT must be an integer between 1 and 65535.");
   const deploymentHost = env.VERCEL_ENV === "preview" ? env.VERCEL_URL : env.VERCEL_PROJECT_PRODUCTION_URL || env.VERCEL_URL;
-  const publicApiUrl = env.PUBLIC_API_URL || (vercel && deploymentHost ? `https://${deploymentHost}` : `http://localhost:${port}`);
+  const publicApiUrl = env.PUBLIC_API_URL || (vercel && deploymentHost ? `https://${deploymentHost}` : "");
   if (!URL.canParse(publicApiUrl)) throw new Error("PUBLIC_API_URL must be an absolute origin URL.");
   const publicUrl = new URL(publicApiUrl);
-  if (!["http:", "https:"].includes(publicUrl.protocol) || (production && publicUrl.protocol !== "https:") ||
+  if (publicUrl.protocol !== "https:" || ["localhost", "127.0.0.1", "[::1]", "0.0.0.0"].includes(publicUrl.hostname) ||
       publicUrl.username || publicUrl.password || publicUrl.pathname !== "/" || publicUrl.search || publicUrl.hash) {
-    throw new Error("PUBLIC_API_URL must be an HTTP origin without credentials or a path, and must use HTTPS in deployment.");
+    throw new Error("PUBLIC_API_URL must be a hosted HTTPS origin without credentials or a path.");
   }
-  const origins = env.FRONTEND_ORIGINS ? env.FRONTEND_ORIGINS.split(",").map((origin) => origin.trim()).filter(Boolean) : ["http://localhost:3000"];
+  const origins = env.FRONTEND_ORIGINS ? env.FRONTEND_ORIGINS.split(",").map((origin) => origin.trim()).filter(Boolean) : [];
   for (const origin of origins) {
-    if (!URL.canParse(origin) || new URL(origin).origin !== origin || !["http:", "https:"].includes(new URL(origin).protocol)) {
-      throw new Error("FRONTEND_ORIGINS must contain explicit HTTP origins without paths or wildcards.");
+    if (!URL.canParse(origin) || new URL(origin).origin !== origin || new URL(origin).protocol !== "https:") {
+      throw new Error("FRONTEND_ORIGINS must contain explicit HTTPS origins without paths or wildcards.");
     }
   }
   return {
-    vercel, databaseUrl: env.DATABASE_URL, secret, temporarySecret: !env.SECRET_KEY,
-    port, host: env.HOST || "127.0.0.1",
+    vercel, databaseUrl: env.DATABASE_URL, secret,
     origins: [...new Set([publicUrl.origin, ...origins])],
-    publicApiUrl: publicUrl.origin, uploadDir: env.UPLOAD_DIR || "uploads",
-    maxUploadMb: vercel ? 4 : 5,
+    publicApiUrl: publicUrl.origin, maxUploadMb: 4,
   };
 }

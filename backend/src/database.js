@@ -1,51 +1,47 @@
-import { PGlite } from "@electric-sql/pglite";
 import pg from "pg";
 import { readFile } from "node:fs/promises";
 
-export async function connectDatabase(url, directory = process.env.PGLITE_DIR || "./.data") {
-  if (url) {
-    const pool = new pg.Pool({
-      connectionString: url, max: process.env.VERCEL === "1" ? 2 : 10,
-      connectionTimeoutMillis: 15000, idleTimeoutMillis: 10000,
-      allowExitOnIdle: process.env.VERCEL === "1",
-    });
-    pool.on("error", (error) => console.error("PostgreSQL idle connection error", { code: error.code, message: error.message }));
-    await pool.query("SELECT 1");
-    const wrap = (client) => ({
-      query: (sql, params = []) => client.query(sql, params),
-      exec: (sql) => client.query(sql),
-    });
-    return {
-      kind: "postgres",
-      ...wrap(pool),
-      async transaction(work) {
-        const client = await pool.connect();
-        try {
-          await client.query("BEGIN");
-          const result = await work(wrap(client));
-          await client.query("COMMIT");
-          return result;
-        } catch (error) {
-          await client.query("ROLLBACK");
-          throw error;
-        } finally {
-          client.release();
-        }
-      },
-      close: () => pool.end(),
-    };
+export function validateDatabaseUrl(url) {
+  if (!url) throw new Error("DATABASE_URL is required; embedded database fallback has been removed.");
+  if (!URL.canParse(url)) throw new Error("DATABASE_URL must be a hosted PostgreSQL connection URL.");
+  const parsed = new URL(url);
+  if (!["postgres:", "postgresql:"].includes(parsed.protocol) || !parsed.hostname ||
+      /^(localhost|.*\.localhost|127(?:\.\d+){0,3}|\[::1\]|0\.0\.0\.0)$/i.test(parsed.hostname)) {
+    throw new Error("DATABASE_URL must be a hosted PostgreSQL connection URL, not a local database.");
   }
-  const instance = new PGlite(directory);
-  await instance.waitReady;
+}
+
+export async function connectDatabase(url) {
+  validateDatabaseUrl(url);
+  const pool = new pg.Pool({
+    connectionString: url, max: process.env.VERCEL === "1" ? 2 : 10,
+    connectionTimeoutMillis: 15000, idleTimeoutMillis: 10000,
+    allowExitOnIdle: process.env.VERCEL === "1",
+  });
+  pool.on("error", (error) => console.error("PostgreSQL idle connection error", { code: error.code, message: error.message }));
+  await pool.query("SELECT 1");
   const wrap = (client) => ({
     query: (sql, params = []) => client.query(sql, params),
-    exec: (sql) => client.exec(sql),
+    exec: (sql) => client.query(sql),
   });
   return {
-    kind: "pglite",
-    ...wrap(instance),
-    transaction: (work) => instance.transaction((tx) => work(wrap(tx))),
-    close: () => instance.close(),
+    kind: "postgres",
+    ...wrap(pool),
+    async transaction(work) {
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        const result = await work(wrap(client));
+        await client.query("COMMIT");
+        return result;
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      } finally {
+        client.release();
+      }
+    },
+    close: () => pool.end(),
   };
 }
 

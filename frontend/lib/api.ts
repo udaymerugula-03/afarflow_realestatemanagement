@@ -1,7 +1,7 @@
 import { errorDetail } from "./utils.ts";
 
 export const TOKEN_KEY = "aqarflow.access_token";
-export const API_URL = (import.meta.env?.VITE_API_URL || "http://localhost:8000/api/v1").replace(/\/$/, "");
+export const API_URL = (import.meta.env?.VITE_API_URL || "/api/v1").replace(/\/$/, "");
 export function demoImage(filename: string, apiUrl = API_URL, browserOrigin = globalThis.location?.origin) {
   const base = apiUrl.startsWith("/") ? new URL(apiUrl, browserOrigin).href : apiUrl;
   return new URL(`/demo-media/${encodeURIComponent(filename)}`, base).href;

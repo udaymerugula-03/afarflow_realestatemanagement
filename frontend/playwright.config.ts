@@ -1,7 +1,7 @@
 import { defineConfig } from "@playwright/test";
 
-const baseURL = process.env.FRONTEND_TEST_URL || "http://localhost:3000";
-const remote = !["localhost", "127.0.0.1", "[::1]"].includes(new URL(baseURL).hostname);
+const baseURL = process.env.FRONTEND_TEST_URL || "https://aqarflow-real-estate.vercel.app";
+if (new URL(baseURL).protocol !== "https:") throw new Error("Browser tests require the cloud application's HTTPS URL.");
 
 export default defineConfig({
   testDir: "e2e",
@@ -17,11 +17,5 @@ export default defineConfig({
     browserName: "chromium",
     channel: process.env.PLAYWRIGHT_CHANNEL || (process.platform === "win32" ? "msedge" : undefined),
     viewport: { width: 1440, height: 1000 },
-  },
-  webServer: remote ? undefined : {
-    command: `${process.platform === "win32" ? "npm.cmd" : "npm"} run start -- --host localhost --port ${new URL(baseURL).port || "3000"}`,
-    url: `${baseURL}/login`,
-    reuseExistingServer: true,
-    timeout: 60000,
   },
 });

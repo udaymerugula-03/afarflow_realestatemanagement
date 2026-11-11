@@ -9,7 +9,7 @@ import { label, money } from "../lib/utils";
 import { Alert, Empty, Pagination, Scene } from "./ui";
 import { ResourceState, useResource, WorkspaceHeading } from "./workspace";
 import { PropertyHistory } from "./property-history";
-const maxImageMb = import.meta.env.VITE_MAX_IMAGE_MB === "4" ? 4 : 5;
+const maxImageMb = 4;
 
 export function PropertyList() {
   const { user } = useAuth(); const [page, setPage] = useState(1); const [query, setQuery] = useState("");
