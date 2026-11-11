@@ -1,0 +1,30 @@
+{
+  "license": "https://unsplash.com/license",
+  "usage": "Locally stored sample stock photographs for an internship demo. Not the actual fictional properties or proof of their location.",
+  "photos": [
+    {
+      "file": "villa.jpg",
+      "description": "Real contemporary villa exterior with swimming pool",
+      "source": "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9",
+      "usage": "House listing, home hero, contact illustration replacement and login background"
+    },
+    {
+      "file": "apartment.jpg",
+      "description": "Real residential apartment building with balconies",
+      "source": "https://images.unsplash.com/photo-1460317442991-0ec209397118",
+      "usage": "Apartment listing"
+    },
+    {
+      "file": "plot.jpg",
+      "description": "Real open agricultural land at sunset",
+      "source": "https://images.unsplash.com/photo-1500382017468-9049fed747ef",
+      "usage": "Generic land sample, not the actual residential plot"
+    },
+    {
+      "file": "neighborhood.jpg",
+      "description": "Real modern skyscrapers viewed from street level",
+      "source": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab",
+      "usage": "Architectural backgrounds and commercial-property fallback"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "AqarFlow: Backend",
+      "type": "shell",
+      "command": "npm.cmd run dev",
+      "options": { "cwd": "${workspaceFolder}\\backend" },
+      "problemMatcher": []
+    },
+    {
+      "label": "AqarFlow: Frontend",
+      "type": "shell",
+      "command": "npm.cmd run dev",
+      "options": { "cwd": "${workspaceFolder}\\frontend" },
+      "problemMatcher": []
+    },
+    {
+      "label": "AqarFlow: Backend tests",
+      "type": "shell",
+      "command": "npm.cmd test",
+      "options": { "cwd": "${workspaceFolder}\\backend" },
+      "problemMatcher": []
+    }
+  ]
+}

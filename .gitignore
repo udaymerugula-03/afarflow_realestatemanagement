@@ -1,0 +1,15 @@
+.env
+.env.*
+!.env.example
+uploads/
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+*.log
+playwright-report/
+test-results/
+.data/
+.demo-credentials*.json
+.vercel/
+~$*

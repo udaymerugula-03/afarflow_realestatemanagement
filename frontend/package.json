@@ -1,0 +1,29 @@
+{
+  "name": "aqarflow-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host localhost --port 3000 --strictPort",
+    "build": "tsc --noEmit && vite build",
+    "start": "vite preview --host localhost --port 3000 --strictPort",
+    "preview": "vite preview --host localhost --port 3000 --strictPort",
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "test:e2e": "playwright test",
+    "test:browser": "playwright test"
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "typescript": "^5.9.0",
+    "vite": "^7.0.0"
+  }
+}
