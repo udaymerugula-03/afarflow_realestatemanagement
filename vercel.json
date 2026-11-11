@@ -16,6 +16,10 @@
     { "source": "/health", "destination": "/api" },
     { "source": "/openapi.json", "destination": "/api" },
     { "source": "/docs/:path*", "destination": "/api" },
+    { "source": "/login", "destination": "/index.html" },
+    { "source": "/contact", "destination": "/index.html" },
+    { "source": "/properties/:path*", "destination": "/index.html" },
+    { "source": "/workspace/:path*", "destination": "/index.html" },
     {
       "source": "/:path*",
       "has": [{ "type": "header", "key": "accept", "value": ".*text/html.*" }],

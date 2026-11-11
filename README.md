@@ -3,6 +3,10 @@
 Real estate management **internship MVP**, following sections 14-16 of `Project_01 (web).docx`.
 Frontend and backend are separate applications, using the requested stack:
 
+**Live application:** https://aqarflow-real-estate.vercel.app
+
+**Source repository:** https://github.com/udaymerugula-03/afarflow_realestatemanagement
+
 | Component | Technology |
 |---|---|
 | Frontend | React.js + TypeScript |
@@ -13,7 +17,8 @@ Frontend and backend are separate applications, using the requested stack:
 | Version control | Git and GitHub |
 
 No Python, FastAPI or SQLite is required. Local development uses no paid services.
-Vercel deployment support is supplied; a public demo requires the hosted-service setup below.
+The Vercel demo uses hosted PostgreSQL and persistent Vercel Blob photos; local development
+continues to use PGlite by default. Hosted-service setup is documented below.
 The supplied daily status report describes SERVORA, a different project; it is not treated as
 AqarFlow requirements or evidence of completed AqarFlow work.
 The existing Java address-maintenance repository remains separate and unchanged.
@@ -297,4 +302,4 @@ but a general audit-log screen is not included. Visit/deal lists are capped at 5
 
 Demo listings are fictional. The software does not verify legal ownership or guarantee compliance.
 Local development remains available. Deployment support targets a small free-tier demonstration,
-not a production SLA; account setup, quotas and a successful live deployment still need confirmation.
+not a production SLA; free-plan quotas, operational backups and access management remain the account owner's responsibility.

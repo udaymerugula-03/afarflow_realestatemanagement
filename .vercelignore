@@ -1,0 +1,13 @@
+.git/
+.vscode/
+**/node_modules/
+**/.env
+**/.env.*
+**/.data/
+**/uploads/
+**/.demo-credentials*.json
+**/test-results/
+**/playwright-report/
+frontend/dist/
+docs/
+**/~$*
