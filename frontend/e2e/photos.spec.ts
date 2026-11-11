@@ -14,7 +14,7 @@ test("cloud listings and backgrounds use distinct bundled real photographs", asy
       await element.decode();
       if (element.naturalWidth < 1200) throw new Error("Expected a full-size demo photograph");
     });
-    await expect(card.locator(".sample-photo-tag")).toHaveText("Sample photo");
+    await expect(card.locator(".property-image").getByText("Sample photo", { exact: true })).toHaveCount(0);
     await expect(card.locator(".property-price")).toContainText("PKR");
   }
   await page.locator(".property-card").filter({ hasText: "AF-001" }).click();
@@ -32,7 +32,7 @@ test("cloud listings and backgrounds use distinct bundled real photographs", asy
   await expect(villaCard).toBeVisible();
   await expect(villa).toHaveAttribute("src", /\/demo-media\/villa\.jpg$/);
   expect(await hero.getAttribute("src")).not.toBe(await villa.getAttribute("src"));
-  await expect(villaCard.locator(".sample-photo-tag")).toHaveText("Sample photo");
+  await expect(villaCard.locator(".property-image").getByText("Sample photo", { exact: true })).toHaveCount(0);
   for (const image of [hero, villa]) {
     await image.scrollIntoViewIfNeeded();
     await image.evaluate(async (element) => {

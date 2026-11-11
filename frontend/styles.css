@@ -9,6 +9,5 @@
 .login-art{background-image:linear-gradient(180deg,rgba(12,34,46,.9) 0%,rgba(12,34,46,.75) 42%,rgba(12,34,46,.2) 100%),var(--villa-image);background-size:cover;background-position:58% center}
 .login-art .scene{display:none}
 .login-art:after{content:"REAL PHOTOGRAPHY / SAMPLE IMAGERY";font-size:9px;letter-spacing:.18em;color:#fff4d8;margin-top:auto;padding-top:100px}
-.sample-photo-tag{position:absolute;bottom:12px;right:12px;padding:4px 9px;border-radius:3px;background:#132e3bd9;color:#fff;font-size:10px}
 .login-form{background:rgba(248,249,247,.96);border-radius:16px}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}

@@ -33,10 +33,11 @@ The supplied SERVORA daily report describes another project, not completed AqarF
 ## Accounts and permissions
 
 The specification does not prescribe a fixed Admin email or password. It requires secure
-authentication and backend-enforced Agency Admin/Agent permissions. Existing account emails
-are retained as login identifiers: a `.local` suffix does not make an account run locally.
+authentication and backend-enforced Agency Admin/Agent permissions. The current work-email
+login identifiers are **`admin@vireleo.me`** and **`agent@vireleo.me`**.
 
-Admin and Agent use **different randomly generated passwords**, stored as bcrypt hashes.
+Admin and Agent use **different securely generated passwords**, stored as bcrypt hashes.
+The current cloud accounts use memorable, randomly generated word-and-number passphrases.
 The owner keeps their private login details in the ignored
 **`backend\.demo-credentials.cloud.json`**:
 
@@ -89,7 +90,8 @@ automatic booking/closure changes. Missing historical snapshots are not fabricat
 
 The approved market is **Pakistan / PKR**, with Lahore, Islamabad and Karachi sample listings.
 Sample listings are fictional. Licensed stock images are illustrative, not verified
-photographs of the stated addresses; cards label them **Sample photo**.
+photographs of the stated addresses. Images have no **Sample photo** overlay; the property
+detail page retains the stock-photo disclosure outside the image.
 The homepage has its own photograph, separate from the villa listing.
 Sources and the [Unsplash License](https://unsplash.com/license) are recorded in
 `backend\public\demo\photo-sources.json`. Static images are bundled at build time, not
