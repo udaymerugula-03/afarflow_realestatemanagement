@@ -36,8 +36,9 @@ The specification does not prescribe a fixed Admin email or password. It require
 authentication and backend-enforced Agency Admin/Agent permissions. The current work-email
 login identifiers are **`admin@vireleo.me`** and **`agent@vireleo.me`**.
 
-Admin and Agent use **different securely generated passwords**, stored as bcrypt hashes.
-The current cloud accounts use memorable, randomly generated word-and-number passphrases.
+Admin and Agent use **different passwords**, stored as bcrypt hashes.
+The owner selected simplified passwords for the current internship demonstration. They are
+predictable and are not suitable for real customer data; replace them before any production use.
 The owner keeps their private login details in the ignored
 **`backend\.demo-credentials.cloud.json`**:
 
