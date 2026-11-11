@@ -27,7 +27,9 @@ const uuid = () => randomUUID();
 export function createApp(db, config) {
   if (!config.secret || config.secret.length < 32) throw new Error("SECRET_KEY must contain at least 32 random characters");
   const app = express();
+  app.set("trust proxy", config.trustProxy ?? false);
   const uploads = path.resolve(config.uploadDir || "uploads");
+  const maxUploadMb = config.maxUploadMb ?? 5;
   const dummyHash = bcrypt.hashSync("not-a-real-user-password", 12);
   app.disable("x-powered-by");
   app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
@@ -240,7 +242,7 @@ export function createApp(db, config) {
     });
     res.json({ message: "Property archived" });
   });
-  const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 1 } });
+  const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: maxUploadMb * 1024 * 1024, files: 1 } });
   api.post("/properties/:id/images", auth, admin, upload.single("file"), async (req, res) => {
     await owned(db, "properties", req.params.id, req.user);
     if (!req.file) fail(422, "Select a JPEG, PNG or WebP image");
@@ -257,10 +259,15 @@ export function createApp(db, config) {
     const item = await db.transaction(async (tx) => {
       const property = await owned(tx, "properties", req.params.id, req.user, true);
       if (property.images.length >= 10) fail(422, "A maximum of 10 images is allowed");
-      await mkdir(uploads, { recursive: true });
-      const filename = `${uuid()}.jpg`;
-      await writeFile(path.join(uploads, filename), content, { flag: "wx" });
-      const url = `${(config.publicApiUrl || "http://localhost:8000").replace(/\/$/, "")}/media/${filename}`;
+      let url;
+      if (config.storeImage) {
+        url = await config.storeImage(content, { agencyId: req.user.agency_id, propertyId: property.id });
+      } else {
+        await mkdir(uploads, { recursive: true });
+        const filename = `${uuid()}.jpg`;
+        await writeFile(path.join(uploads, filename), content, { flag: "wx" });
+        url = `${(config.publicApiUrl || "http://localhost:8000").replace(/\/$/, "")}/media/${filename}`;
+      }
       const result = await update(tx, "properties", property.id, { images: [...property.images, url] });
       await audit(tx, req.user, "property.image_uploaded", result.id);
       return result;
@@ -446,7 +453,7 @@ export function createApp(db, config) {
   app.use((_req, _res, next) => next(new HttpError(404, "Route not found")));
   app.use((error, req, res, _next) => {
     if (error instanceof z.ZodError) return res.status(422).json({ detail: error.issues.map((issue) => ({ loc: ["body", ...issue.path], msg: issue.message })) });
-    if (error instanceof multer.MulterError) return res.status(error.code === "LIMIT_FILE_SIZE" ? 413 : 422).json({ detail: "Upload one image of at most 5 MB" });
+    if (error instanceof multer.MulterError) return res.status(error.code === "LIMIT_FILE_SIZE" ? 413 : 422).json({ detail: `Upload one image of at most ${maxUploadMb} MB` });
     if (error.code === "23505") return res.status(409).json({ detail: "A record with these unique values already exists" });
     if (error.code === "23503" || error.code === "23514") return res.status(422).json({ detail: "Invalid linked record or field value" });
     if (error.type === "entity.parse.failed") return res.status(400).json({ detail: "Invalid JSON request body" });

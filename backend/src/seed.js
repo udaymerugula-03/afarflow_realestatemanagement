@@ -12,6 +12,7 @@ try {
     throw new Error("Demo administrator already exists. Existing data was preserved. See .demo-credentials.json for the generated local login.");
   }
   const password = process.env.DEMO_PASSWORD || randomBytes(18).toString("base64url");
+  const credentialsFile = process.env.DEMO_CREDENTIALS_FILE || ".demo-credentials.json";
   if (password.length < 12 || Buffer.byteLength(password) > 72) throw new Error("DEMO_PASSWORD must contain 12+ characters and at most 72 UTF-8 bytes");
   const password_hash = await bcrypt.hash(password, 12);
   await db.transaction(async (tx) => {
@@ -44,12 +45,12 @@ try {
       message: "I would like to arrange a visit.", assigned_agent_id: agent.id,
     });
     await insert(tx, "activities", { id: randomUUID(), agency_id: agency.id, lead_id: lead.id, actor_id: admin.id, body: "Demo inquiry added." });
-    await writeFile(".demo-credentials.json", JSON.stringify({
+    await writeFile(credentialsFile, JSON.stringify({
       note: "LOCAL DEMO ONLY. Ignored by Git. Never reuse this password for real accounts.",
       admin: email, agent: "agent@vireleo.local", password,
     }, null, 2), { mode: 0o600, flag: "wx" });
   });
-  console.info("Demo data created. Local admin/agent credentials are in backend\\.demo-credentials.json (ignored by Git).");
+  console.info(`Demo data created. Admin/agent credentials are in ${credentialsFile}; keep this file private and out of Git.`);
 } finally {
   await db.close();
 }

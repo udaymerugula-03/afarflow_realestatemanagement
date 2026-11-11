@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import bcrypt from "bcryptjs";
 import request from "supertest";
 import sharp from "sharp";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { access, mkdtemp, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { createApp } from "../src/app.js";
 import { connectDatabase, insert, migrate } from "../src/database.js";
@@ -122,6 +122,46 @@ test("validation, duplicate reference codes and valid/invalid image uploads", as
   const filename = uploaded.body.images[0].split("/").at(-1);
   await api.get(`/media/${filename}`).expect(200).expect("Content-Type", /image\/jpeg/);
   await api.post("/api/v1/public/inquiries").send({ property_id: item.id, name: "Buyer", email: "bad", phone: "invalid", message: "Test", consent: false }).expect(422);
+});
+
+test("cloud photo uploads persist remote URLs without using the local upload directory", async () => {
+  const item = await property();
+  const uploadDir = path.join(directory, "cloud-must-not-write-here");
+  const remoteUrl = "https://res.cloudinary.com/fixture-cloud/image/upload/v1/fixture.jpg";
+  let uploaded = 0;
+  const cloudApi = request(createApp(db, {
+    secret: "test-only-signing-key-not-for-production-123456", uploadDir, maxUploadMb: 4,
+    storeImage: async (content, context) => {
+      assert.equal((await sharp(content).metadata()).format, "jpeg");
+      assert.equal(context.propertyId, item.id);
+      assert.equal(context.agencyId, item.agency_id);
+      uploaded++;
+      return remoteUrl;
+    },
+  }));
+  const image = await sharp({ create: { width: 10, height: 10, channels: 3, background: "#123456" } }).png().toBuffer();
+  const response = await cloudApi.post(`/api/v1/properties/${item.id}/images`).set(headers.admin).attach("file", image, "fixture.png").expect(200);
+  assert.deepEqual(response.body.images, [remoteUrl]);
+  assert.equal(uploaded, 1);
+  await assert.rejects(access(uploadDir), { code: "ENOENT" });
+  await cloudApi.post(`/api/v1/properties/${item.id}/images`).set(headers.admin)
+    .attach("file", Buffer.alloc(4 * 1024 * 1024 + 1), "large.png").expect(413);
+  assert.equal(uploaded, 1);
+});
+
+test("a failed cloud upload never appends an image or reports success", async () => {
+  const item = await property();
+  const cloudApi = request(createApp(db, {
+    secret: "test-only-signing-key-not-for-production-123456", uploadDir: directory,
+    storeImage: async () => {
+      const error = new Error("Property photo storage is unavailable. Please try again later.");
+      error.status = 502;
+      throw error;
+    },
+  }));
+  const image = await sharp({ create: { width: 2, height: 2, channels: 3, background: "#123456" } }).png().toBuffer();
+  await cloudApi.post(`/api/v1/properties/${item.id}/images`).set(headers.admin).attach("file", image, "fixture.png").expect(502);
+  assert.deepEqual((await api.get(`/api/v1/properties/${item.id}`).set(headers.admin)).body.images, []);
 });
 
 test("cross-agency assignment protection, linked records, and agent creation", async () => {

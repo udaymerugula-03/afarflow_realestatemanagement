@@ -4,13 +4,19 @@ import { readFile } from "node:fs/promises";
 
 export async function connectDatabase(url, directory = process.env.PGLITE_DIR || "./.data") {
   if (url) {
-    const pool = new pg.Pool({ connectionString: url, max: 10 });
+    const pool = new pg.Pool({
+      connectionString: url, max: process.env.VERCEL === "1" ? 2 : 10,
+      connectionTimeoutMillis: 15000, idleTimeoutMillis: 10000,
+      allowExitOnIdle: process.env.VERCEL === "1",
+    });
+    pool.on("error", (error) => console.error("PostgreSQL idle connection error", { code: error.code, message: error.message }));
     await pool.query("SELECT 1");
     const wrap = (client) => ({
       query: (sql, params = []) => client.query(sql, params),
       exec: (sql) => client.query(sql),
     });
     return {
+      kind: "postgres",
       ...wrap(pool),
       async transaction(work) {
         const client = await pool.connect();
@@ -36,6 +42,7 @@ export async function connectDatabase(url, directory = process.env.PGLITE_DIR ||
     exec: (sql) => client.exec(sql),
   });
   return {
+    kind: "pglite",
     ...wrap(instance),
     transaction: (work) => instance.transaction((tx) => work(wrap(tx))),
     close: () => instance.close(),
@@ -43,8 +50,9 @@ export async function connectDatabase(url, directory = process.env.PGLITE_DIR ||
 }
 
 export async function migrate(db) {
-  await db.exec("CREATE TABLE IF NOT EXISTS schema_migrations (version TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)");
   await db.transaction(async (tx) => {
+    if (db.kind === "postgres") await tx.query("SELECT pg_advisory_xact_lock($1)", [1798901]);
+    await tx.exec("CREATE TABLE IF NOT EXISTS schema_migrations (version TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)");
     for (const [version, filename] of [
       ["001", "001_initial.sql"], ["002", "002_india_demo.sql"], ["003", "003_real_demo_photos.sql"],
       ["004", "004_pakistan_demo.sql"],

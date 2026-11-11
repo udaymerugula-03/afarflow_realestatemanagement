@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { api, ApiError, json, TOKEN_KEY } from "../lib/api.ts";
+import { api, ApiError, demoImage, json, TOKEN_KEY } from "../lib/api.ts";
+
+test("demo photographs resolve against local and same-origin deployed API bases", () => {
+  assert.equal(demoImage("villa.jpg", "http://localhost:8000/api/v1"), "http://localhost:8000/demo-media/villa.jpg");
+  assert.equal(demoImage("villa.jpg", "/api/v1", "https://fixture-aqarflow.vercel.app"), "https://fixture-aqarflow.vercel.app/demo-media/villa.jpg");
+});
 
 function setup() {
   const values = new Map<string, string>();

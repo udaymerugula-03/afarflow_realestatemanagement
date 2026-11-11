@@ -9,6 +9,7 @@ import { label, money } from "../lib/utils";
 import { Alert, Empty, Pagination, Scene } from "./ui";
 import { ResourceState, useResource, WorkspaceHeading } from "./workspace";
 import { PropertyHistory } from "./property-history";
+const maxImageMb = import.meta.env.VITE_MAX_IMAGE_MB === "4" ? 4 : 5;
 
 export function PropertyList() {
   const { user } = useAuth(); const [page, setPage] = useState(1); const [query, setQuery] = useState("");
@@ -54,6 +55,8 @@ function PropertyForm({ property, reload }: { property?: Property; reload?: () =
   }
   async function upload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); const form = event.currentTarget; const data = new FormData(form); setBusy(true); setError(""); setSuccess("");
+    const file = data.get("file");
+    if (file instanceof File && file.size > maxImageMb * 1024 * 1024) { setError(`Upload a photo of at most ${maxImageMb} MB.`); setBusy(false); return; }
     try { await api<Property>(`/properties/${property!.id}/images`, { method: "POST", body: data }); form.reset(); reload?.(); }
     catch (error) { setError((error as Error).message); } finally { setBusy(false); }
   }
@@ -99,7 +102,7 @@ function PropertyForm({ property, reload }: { property?: Property; reload?: () =
     </form>
     {property && <section className="panel">
       <h2>Property photography</h2>
-      <p className="muted">Photos are uploaded directly to your backend. No external image URL is needed.</p>
+      <p className="muted">Upload JPEG, PNG or WebP photos up to {maxImageMb} MB. No external image URL is needed.</p>
       <div className="image-grid">{property.images.map((image, index) => <img src={image} alt={`Property photo ${index + 1}`} key={`${image}-${index}`} />)}</div>
       {!property.images.length && <p className="muted">No photos uploaded yet.</p>}
       {admin && <form className="toolbar" onSubmit={upload}>

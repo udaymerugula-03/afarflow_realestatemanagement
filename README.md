@@ -12,7 +12,8 @@ Frontend and backend are separate applications, using the requested stack:
 | Editor | Visual Studio Code |
 | Version control | Git and GitHub |
 
-No Python, FastAPI, SQLite or paid services are required. Deployment is intentionally deferred.
+No Python, FastAPI or SQLite is required. Local development uses no paid services.
+Vercel deployment support is supplied; a public demo requires the hosted-service setup below.
 The supplied daily status report describes SERVORA, a different project; it is not treated as
 AqarFlow requirements or evidence of completed AqarFlow work.
 The existing Java address-maintenance repository remains separate and unchanged.
@@ -219,21 +220,71 @@ Frontend commands and screen routes are documented in `frontend\README.md`.
 Tests use isolated, in-memory PostgreSQL through PGlite and do not modify demonstration data.
 Backend route documentation is generated from the same validation schemas used by the API.
 
+## Vercel deployment
+
+Import this repository into **one Vercel project**, using the repository root (`.`), not
+`frontend` or `backend`. The committed `vercel.json` builds the React frontend and exposes the
+Express API as a Node.js function. Public pages and REST calls share the same HTTPS origin.
+The deployment build uses `/api/v1` rather than `localhost`, includes the licensed demo
+photographs, and supports direct navigation to React routes.
+
+Configure these values in Vercel Project Settings > Environment Variables before deploying:
+
+| Variable | Required deployment value |
+|---|---|
+| DATABASE_URL | Hosted PostgreSQL connection URL, including the provider's TLS requirements; a Neon free-tier database is suitable for a small demo. |
+| SECRET_KEY | A new random secret of at least 32 characters, retained between deployments. Never use the local demo signing key. |
+| BLOB_STORE_ID | Connect a public Vercel Blob store in Production. Vercel supplies this store ID and rotating OIDC credentials; no separate photo-provider account is required. |
+| PUBLIC_API_URL | Optional HTTPS site origin without `/api/v1`; otherwise Vercel's deployment hostname is used. |
+| FRONTEND_ORIGINS | Optional explicit additional frontend origins, comma-separated. The configured site origin is allowed automatically. |
+
+Use the providers' free plans only where their current terms and quotas fit the internship demo.
+Do not enable paid upgrades or automatic spending. Database and photo-provider signup/authorization
+must be completed by the account owner. Never send provider passwords, API secrets or connection
+strings in chat, frontend variables, source files or Git commits.
+
+Vercel must use a hosted PostgreSQL server: the local `.data` folder cannot be deployed.
+Cloud startup fails explicitly if the database, stable signing key or persistent photo
+storage is missing. Migrations run transactionally on startup and use a PostgreSQL advisory lock
+to serialize concurrent cold starts. Existing local PGlite development remains supported.
+
+To populate a **new, empty cloud database**, open a separate local terminal in `backend`.
+Set `DATABASE_URL` in that terminal using the value from your provider, set
+`DEMO_CREDENTIALS_FILE=.demo-credentials.cloud.json`, and run `npm.cmd run seed`.
+Do not run this against the local PGlite folder while its API is running, and do not overwrite
+your local `.env` just to seed the cloud. The seed generates a fresh password unless an explicit
+`DEMO_PASSWORD` is supplied, creates Admin/Agent accounts and sample Pakistan listings, and writes
+the credentials to the ignored cloud-specific file. Share cloud logins privately with your manager;
+do not reuse the easy local demo password for an Internet-accessible workspace.
+The seed refuses to overwrite an existing demo administrator or credential file.
+
+The deployed upload limit is **4 MB per photo** to stay below Vercel's request-body limit;
+local development retains the 5 MB limit. JPEG/PNG/WebP validation, re-encoding and the
+ten-photo-per-property limit apply in both environments. Demo photos are static assets;
+new uploads are stored in Vercel Blob. Public photo URLs must not be used for confidential documents.
+
+After deployment, the public portal, `/health`, `/api/v1/public/properties`, login, inquiry,
+authorized property edits and image upload must work on the published HTTPS URL before it is
+described as a working full-stack demonstration. A successful frontend build alone is not evidence
+that the API, hosted data or photo storage is configured.
+
 ## Git and GitHub
 
 The frontend and backend share one project root with separate package manifests and lockfiles.
 The `.gitignore` excludes dependencies, database files, uploaded photos, build artifacts,
 environment secrets and generated local demo credentials.
-This folder is already initialized as a separate Git repository on branch `main`.
-When ready to prepare your first commit:
+This is a separate Git repository on branch `main`. The project repository is:
+https://github.com/udaymerugula-03/afarflow_realestatemanagement
+To publish subsequent changes:
 
 ```powershell
 git add .
 git status
 ```
 
-Review the staged files before making a commit or pushing. No GitHub account, remote repository,
-commit history or public deployment has been created on your behalf.
+Review the staged files before making a commit or pushing.
+The live Vercel URL must be taken from an actual successful deployment, not guessed from a
+project name. Repository publication does not by itself create a working deployment.
 
 ## Scope limits
 
@@ -245,4 +296,5 @@ a separate customer-account portal is not included. Property events appear on pr
 but a general audit-log screen is not included. Visit/deal lists are capped at 500 for the demo.
 
 Demo listings are fictional. The software does not verify legal ownership or guarantee compliance.
-Development is local and zero-cost; hosting and deployment are out of scope.
+Local development remains available. Deployment support targets a small free-tier demonstration,
+not a production SLA; account setup, quotas and a successful live deployment still need confirmation.
