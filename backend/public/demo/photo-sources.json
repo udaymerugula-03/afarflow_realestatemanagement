@@ -1,12 +1,24 @@
 {
   "license": "https://unsplash.com/license",
-  "usage": "Locally stored sample stock photographs for an internship demo. Not the actual fictional properties or proof of their location.",
+  "usage": "Bundled sample stock photographs delivered through the cloud CDN for an internship MVP. Not the actual fictional properties or proof of their location.",
   "photos": [
     {
+      "file": "hero.jpg",
+      "description": "Real white contemporary home with a sunlit terrace, pool and palms",
+      "source": "https://images.unsplash.com/photo-1512917774080-9991f1c4c750",
+      "download": "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1800&q=85&fm=jpg",
+      "license": "https://unsplash.com/license",
+      "usage": "Dedicated homepage hero sample stock photograph, not an actual listed property",
+      "sha256": "82ba54fabe8eec7280d019c1ea0e245b55570570fde0c8f0d0d562f45cb8cfdb"
+    },
+    {
       "file": "villa.jpg",
-      "description": "Real contemporary villa exterior with swimming pool",
-      "source": "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9",
-      "usage": "House listing, home hero, contact illustration replacement and login background"
+      "description": "Real dark-clad contemporary villa at dusk with illuminated windows, lawn and a large tree",
+      "source": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c",
+      "download": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1800&q=85&fm=jpg",
+      "license": "https://unsplash.com/license",
+      "usage": "House listing sample including AF-001, contact illustration replacement and login background; not the homepage hero",
+      "sha256": "b11f9082bf40431ee5ed938bd12d74a101d4965e4a7bc2b3b26ad94a58d9dd5d"
     },
     {
       "file": "apartment.jpg",
