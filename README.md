@@ -58,6 +58,12 @@ of visible UI controls, including tenant isolation.
 
 ## Seven-day MVP
 
+The responsive interface includes a public Buy/Rent search with city and property-type
+shortcuts, filter-aware collection links, and a shared Admin/Agent sign-in page. The workspace
+uses role-aware navigation, six live-count cards, refresh and workflow shortcuts. Property
+counts cover agency inventory; Agent lead, visit and deal counts cover only assigned records.
+The visual refresh does not add enterprise modules or change existing backend permissions.
+
 | Area | Implemented behavior |
 |---|---|
 | Public website | Home, property search/filtering/pagination, details, contact and consent-based inquiries |

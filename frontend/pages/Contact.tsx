@@ -1,5 +1,23 @@
 import Link from "../components/link";
 import { Footer, PublicHeader, Scene } from "../components/ui";
+import { Icon } from "../components/icons";
+
 export default function Contact() {
-  return <><PublicHeader /><main className="container section"><p className="eyebrow">LET’S START A CONVERSATION</p><h1 className="page-title">Good moves start<br />with a connection.</h1><div className="contact-grid"><div><p className="intro">Buying, renting, or just exploring? Find a property that catches your eye, then connect directly with its listing team.</p><div className="panel"><h2>Looking for your next place?</h2><p className="muted">Each listing has a dedicated inquiry form. Your message goes to the agency managing that property, along with the details they need to help.</p><Link href="/properties" className="button">Find a property & get in touch ↗</Link></div><div className="panel"><h2>Already part of the team?</h2><p className="muted">Sign in to manage your properties and follow up on client conversations. For account access, contact your agency administrator.</p><Link href="/login" className="text-link">Open your workspace →</Link></div><p className="muted">We only collect contact details when you submit a property inquiry with your consent. This site does not offer a general contact submission endpoint.</p></div><div className="contact-art"><Scene /></div></div></main><Footer /></>;
+  return <>
+    <PublicHeader />
+    <main id="main-content" className="container section contact-page">
+      <p className="eyebrow">GOOD MOVES START WITH A CONVERSATION</p>
+      <h1 className="page-title">Let's open<br /><span style={{ color: "var(--teal)" }}>a few doors.</span></h1>
+      <div className="contact-grid">
+        <div>
+          <p className="intro">A first home, a new neighborhood, or a fresh opportunity. Wherever you're headed, start with the people who know the property.</p>
+          <div className="panel"><span className="category-icon"><Icon name="message" size={23} /></span><h2>Have a property in mind?</h2><p>Open a listing and send an inquiry to its agency. Your questions and contact details reach the team managing that property.</p><Link href="/properties" className="button">Explore properties <Icon name="arrow" size={16} /></Link></div>
+          <div className="panel"><h2>Already part of the team?</h2><p>Your agency workspace brings inventory, lead follow-ups, visits and deals into one place.</p><Link href="/login" className="text-link">Admin / Agent sign in <Icon name="arrow" size={16} /></Link></div>
+          <p className="fine-print">Property inquiries require your consent. This page provides guidance; it does not submit a general contact message. For account access, contact your agency administrator.</p>
+        </div>
+        <div><div className="contact-art"><Scene /></div><p className="contact-caption">THE NEXT CHAPTER COULD BE JUST A CONVERSATION AWAY.</p></div>
+      </div>
+    </main>
+    <Footer />
+  </>;
 }

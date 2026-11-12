@@ -2,8 +2,19 @@ import { FormEvent, useEffect, useState } from "react";
 import { api } from "../lib/api";
 import type { Page, PublicProperty } from "../lib/types";
 import { Alert, Empty, Loading, Pagination, PropertyCard } from "./ui";
+import { useSearchParams } from "react-router-dom";
+import { Icon } from "./icons";
 export function Marketplace({ compact = false }: { compact?: boolean }) {
-  const [query, setQuery] = useState(""); const [page, setPage] = useState(1);
+  const [searchParams] = useSearchParams();
+  const filters = new URLSearchParams();
+  if (!compact) {
+    for (const key of ["q", "city", "purpose", "type", "min_price", "max_price", "bedrooms"]) {
+      const value = searchParams.get(key)?.trim();
+      if (value) filters.set(key, value);
+    }
+  }
+  const initialQuery = filters.toString();
+  const [query, setQuery] = useState(initialQuery); const [page, setPage] = useState(1);
   const [data, setData] = useState<Page<PublicProperty> | null>(null);
   const [error, setError] = useState(""); const [loading, setLoading] = useState(true);
   const [retry, setRetry] = useState(0);
@@ -25,18 +36,18 @@ export function Marketplace({ compact = false }: { compact?: boolean }) {
   return <>
     <form className="filter-panel" onSubmit={filter}>
       <div className="filter-grid">
-        <label className="search-field">Search<input name="q" maxLength={200} placeholder="A neighborhood, a home, a new start…" /></label>
-        <label>City<input name="city" maxLength={100} placeholder="Lahore, Islamabad, Karachi..." /></label>
-        <label>Purpose<select name="purpose"><option value="">Buy or rent</option><option value="sale">Buy</option><option value="rent">Rent</option></select></label>
-        <button type="submit">Find a property ↗</button>
+        <label className="search-field">Search<input name="q" defaultValue={compact ? "" : searchParams.get("q") || ""} maxLength={200} placeholder="Title, neighborhood or reference..." /></label>
+        <label>City<input name="city" defaultValue={compact ? "" : searchParams.get("city") || ""} maxLength={100} placeholder="Lahore, Islamabad, Karachi..." /></label>
+        <label>Purpose<select name="purpose" defaultValue={compact ? "" : searchParams.get("purpose") || ""}><option value="">Buy or rent</option><option value="sale">Buy</option><option value="rent">Rent</option></select></label>
+        <button type="submit"><Icon name="search" size={17} />Find a property</button>
       </div>
-      <details>
+      <details open={!compact && !!["type", "min_price", "max_price", "bedrooms"].find((key) => searchParams.get(key))}>
         <summary>More filters</summary>
         <div className="form-grid">
-          <label>Property type<select name="type"><option value="">All types</option><option value="house">House</option><option value="apartment">Apartment</option><option value="plot">Plot</option><option value="commercial">Commercial</option></select></label>
-          <label>Minimum price (PKR)<input name="min_price" type="number" min="0" step="0.01" placeholder="No minimum" /></label>
-          <label>Maximum price (PKR)<input name="max_price" type="number" min="0" step="0.01" placeholder="No maximum" /></label>
-          <label>Bedrooms<input name="bedrooms" type="number" min="0" max="100" placeholder="Any" /></label>
+          <label>Property type<select name="type" defaultValue={compact ? "" : searchParams.get("type") || ""}><option value="">All types</option><option value="house">House</option><option value="apartment">Apartment</option><option value="plot">Plot</option><option value="commercial">Commercial</option></select></label>
+          <label>Minimum price (PKR)<input name="min_price" defaultValue={compact ? "" : searchParams.get("min_price") || ""} type="number" min="0" step="0.01" placeholder="No minimum" /></label>
+          <label>Maximum price (PKR)<input name="max_price" defaultValue={compact ? "" : searchParams.get("max_price") || ""} type="number" min="0" step="0.01" placeholder="No maximum" /></label>
+          <label>Bedrooms<input name="bedrooms" defaultValue={compact ? "" : searchParams.get("bedrooms") || ""} type="number" min="0" max="100" placeholder="Any" /></label>
         </div>
       </details>
     </form>

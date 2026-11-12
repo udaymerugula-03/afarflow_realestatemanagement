@@ -52,4 +52,26 @@ test("cloud listings and backgrounds use distinct bundled real photographs", asy
   await page.getByRole("link", { name: "Log in" }).click();
   await expect(page.getByRole("heading", { name: "Admin / Agent sign in", exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Find a rental", exact: true }).click();
+  await page.getByLabel("Search city", { exact: true }).selectOption("Islamabad");
+  await page.getByLabel("Search property type", { exact: true }).selectOption("apartment");
+  await page.locator(".hero-search").getByRole("button", { name: "Find a property", exact: true }).click();
+  await expect(page).toHaveURL(/\/properties\?purpose=rent&city=Islamabad&type=apartment$/);
+  await expect(page.getByRole("combobox", { name: "Purpose", exact: true })).toHaveValue("rent");
+  await expect(page.getByRole("combobox", { name: "Property type", exact: true })).toHaveValue("apartment");
+  await expect(page.locator(".property-card").filter({ hasText: "AF-002" })).toBeVisible();
+  await expect(page.locator(".property-card").filter({ hasText: "AF-001" })).toHaveCount(0);
+  await page.getByRole("link", { name: "Properties for sale", exact: true }).click();
+  await expect(page.locator("#main-content")).toBeFocused();
+  await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
+  await expect(page.getByRole("combobox", { name: "Purpose", exact: true })).toHaveValue("sale");
+  await expect(page.locator(".property-card").filter({ hasText: "AF-001" })).toBeVisible();
+  await expect(page.locator(".property-card").filter({ hasText: "AF-002" })).toHaveCount(0);
+  await page.goto("/");
+  await page.locator(".category-card").filter({ hasText: "Plots & land" }).click();
+  await expect(page.getByRole("combobox", { name: "Property type", exact: true })).toHaveValue("plot");
+  await expect(page.locator(".property-card").filter({ hasText: "AF-003" })).toBeVisible();
+  await expect(page.locator(".property-card").filter({ hasText: "AF-001" })).toHaveCount(0);
 });
