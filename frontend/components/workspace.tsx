@@ -80,7 +80,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
       </div>
     </aside>
     <div className="workspace-body">
-      <header className="workspace-header"><div className="workspace-breadcrumb"><span>Workspace</span><span aria-hidden="true">/</span><strong>{currentPage}</strong></div><div className="workspace-header-identity"><span className="workspace-role"><WorkspaceIcon name="shield" size={14} />{user.role === "admin" ? "Administrator" : "Agent"}</span><span className="header-avatar" aria-hidden="true">{initials}</span></div></header>
+      <header className="workspace-header">      <div className="workspace-breadcrumb"><span>AqarFlow</span><span aria-hidden="true">/</span><strong>{currentPage}</strong></div><div className="workspace-header-identity"><span className="workspace-role"><WorkspaceIcon name="shield" size={14} />{user.role === "admin" ? "Administrator" : "Agent"}</span><span className="header-avatar" aria-hidden="true">{initials}</span></div></header>
       <main className="workspace-main" id="workspace-content" tabIndex={-1}><Alert error={logoutError} />{children}</main>
     </div>
   </div>;
@@ -89,13 +89,13 @@ export function WorkspaceHeading({ eyebrow = "YOUR WORKSPACE", title, descriptio
   return <div className="workspace-heading"><div><p className="eyebrow">{eyebrow}</p><h1>{title}</h1><p className="muted">{description}</p></div>{action}</div>;
 }
 
-const metrics: { key: keyof Dashboard; title: string; description: string; icon: WorkspaceIconName; href: string; tone: string; property?: boolean }[] = [
-  { key: "published_properties", title: "Published properties", description: "Public listings · available or reserved", icon: "globe", href: "/workspace/properties", tone: "blue", property: true },
-  { key: "available_properties", title: "Available properties", description: "Available inventory · published or not", icon: "property", href: "/workspace/properties", tone: "teal", property: true },
-  { key: "new_leads", title: "New leads", description: "Conversations in the New stage", icon: "leads", href: "/workspace/leads", tone: "amber" },
-  { key: "total_leads", title: "Total leads", description: "All conversations · every stage", icon: "team", href: "/workspace/leads", tone: "violet" },
-  { key: "upcoming_visits", title: "Upcoming visits", description: "Future visits · requested or confirmed", icon: "visits", href: "/workspace/visits", tone: "blue" },
-  { key: "open_deals", title: "Open deals", description: "Active deals · excludes won and lost", icon: "deals", href: "/workspace/deals", tone: "teal" },
+const metrics: { key: keyof Dashboard; title: string; description: string; icon: WorkspaceIconName; href: string; property?: boolean }[] = [
+  { key: "published_properties", title: "Published properties", description: "Public listings · available or reserved", icon: "globe", href: "/workspace/properties", property: true },
+  { key: "available_properties", title: "Available properties", description: "Available inventory · published or not", icon: "property", href: "/workspace/properties", property: true },
+  { key: "new_leads", title: "New leads", description: "Conversations in the New stage", icon: "leads", href: "/workspace/leads" },
+  { key: "total_leads", title: "Total leads", description: "All conversations · every stage", icon: "team", href: "/workspace/leads" },
+  { key: "upcoming_visits", title: "Upcoming visits", description: "Future visits · requested or confirmed", icon: "visits", href: "/workspace/visits" },
+  { key: "open_deals", title: "Open deals", description: "Active deals · excludes won and lost", icon: "deals", href: "/workspace/deals" },
 ];
 
 export function DashboardView() {
@@ -110,7 +110,7 @@ export function DashboardView() {
     <WorkspaceHeading eyebrow="THE BIG PICTURE" title="Overview dashboard" description={`Welcome back, ${user?.full_name.trim().split(/\s+/)[0] || "team"}. Let's make the next move count.`} action={<Link className="button" href="/workspace/leads"><WorkspaceIcon name="leads" size={17} />Open lead inbox<WorkspaceIcon name="arrow" size={16} /></Link>} />
     <div className="dashboard-context"><span><span className="context-marker" />{isAdmin ? "Agency-wide overview" : "Your assigned work + agency inventory"}</span><button className="dashboard-refresh" disabled={resource.loading} onClick={resource.reload}><WorkspaceIcon name="refresh" size={15} />{resource.loading ? "Refreshing…" : "Refresh counts"}</button></div>
     <ResourceState {...resource} />
-    {resource.data && <div className="stats-grid">{metrics.map((metric) => <Link className={`stat-card stat-${metric.tone}`} href={metric.href} key={metric.key}>
+    {resource.data && <div className="stats-grid">{metrics.map((metric) =>     <Link className="stat-card" href={metric.href} key={metric.key}>
       <div className="stat-top"><span className="stat-icon"><WorkspaceIcon name={metric.icon} size={21} /></span><span className="stat-scope">{isAdmin || metric.property ? "AGENCY" : "ASSIGNED TO YOU"}</span></div>
       <span className="stat-label">{metric.title}</span><strong>{resource.data![metric.key].toLocaleString()}</strong><p className="stat-description">{metric.description}</p><span className="stat-foot"><span>View {metric.property ? "properties" : metric.key.includes("leads") ? "leads" : metric.key === "upcoming_visits" ? "visits" : "deals"}</span><WorkspaceIcon name="arrow" size={15} /></span>
     </Link>)}</div>}

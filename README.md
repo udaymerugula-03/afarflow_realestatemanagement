@@ -62,6 +62,9 @@ The responsive interface includes a public Buy/Rent search with city and propert
 shortcuts, filter-aware collection links, and a shared Admin/Agent sign-in page. The workspace
 uses role-aware navigation, six live-count cards, refresh and workflow shortcuts. Property
 counts cover agency inventory; Agent lead, visit and deal counts cover only assigned records.
+Public pages, sign-in and both workspace roles share the AqarFlow name, home-symbol logo,
+tagline, typography and navy/teal palette. `frontend\theme.css` owns the shared branding and
+design tokens; workspace styles change layout and information density, not the brand.
 The visual refresh does not add enterprise modules or change existing backend permissions.
 
 | Area | Implemented behavior |

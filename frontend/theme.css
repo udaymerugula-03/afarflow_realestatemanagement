@@ -1,0 +1,59 @@
+:root {
+  --navy: #122a43;
+  --navy-dark: #0c1d32;
+  --primary-hover: #204663;
+  --teal: #16716b;
+  --accent-soft: #edf6f3;
+  --accent-line: #d8e9e3;
+  --gold: #c3a36a;
+  --paper: #f7f9fc;
+  --surface: #fff;
+  --line: #e4eaf0;
+  --muted: #586d80;
+  --focus: #16716b;
+  --focus-soft: #d5eae7;
+  --control-radius: 9px;
+  --field-radius: 8px;
+  --radius: 14px;
+}
+
+.brand, .sidebar .brand, .login-art .brand {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  padding: 0 0 11px;
+  color: var(--navy);
+  font-size: 26px;
+  font-weight: 750;
+  line-height: 1;
+  letter-spacing: -1.2px;
+  white-space: nowrap;
+}
+.brand > span:not(.brand-mark) { font-weight: 450; color: inherit; }
+.brand .brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 43px;
+  height: 45px;
+  padding: 0;
+  margin-right: 10px;
+  border: 0;
+  border-radius: 11px;
+  background: var(--navy);
+  color: var(--surface);
+}
+.brand small, .sidebar .brand small {
+  display: block;
+  position: absolute;
+  bottom: 2px;
+  left: 54px;
+  color: inherit;
+  font-size: 6px;
+  letter-spacing: 1.65px;
+}
+@media (max-width: 680px) {
+  .brand, .sidebar .brand, .login-art .brand { font-size: 22px; }
+  .brand .brand-mark { width: 36px; height: 38px; margin-right: 8px; border-radius: 10px; }
+  .brand small, .sidebar .brand small { font-size: 5px; left: 44px; letter-spacing: 1.3px; }
+}
